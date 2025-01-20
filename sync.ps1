@@ -12,6 +12,16 @@ function Get-FolderPath {
     }
 }
 
+# Function to prompt the user for a yes/no/all response
+function Get-UserConfirmation {
+    param (
+        $message,
+        $options
+    )
+    $response = Read-Host "$message $options"
+    return $response
+}
+
 # Prompt the user to choose the folder location
 try {
     $sptInstallationPath = Get-FolderPath
