@@ -12,7 +12,7 @@ if (-not (Test-Path -Path $downloadPath)) {
 }
 
 # Create a temporary extraction folder
-$tmpPath = Join-Path -Path $PSScriptRoot -ChildPath "TempExtract"
+$tmpPath = Join-Path -Path $PSScriptRoot -ChildPath "tmp"
 if (-not (Test-Path -Path $tmpPath)) {
     New-Item -Path $tmpPath -ItemType Directory | Out-Null
 }
@@ -23,9 +23,9 @@ function downloadExtract {
         $name,
         $url
     )
-    $fileName = [System.IO.Path]::GetFileName($url)
+    $fileName = "$name.zip"
     $outputFile = Join-Path -Path $downloadPath -ChildPath $fileName
-    Write-Output "Downloading $name from $url"
+    Write-Output "Downloading $name from $url to $outputFile"
     Invoke-WebRequest -Uri $url -OutFile $outputFile
 
     # Extract the zip file
@@ -35,11 +35,6 @@ function downloadExtract {
 # Iterate through Core components
 foreach ($core in $json.Core) {
     downloadExtract -name $core.name -url $core.url
-}
-
-# Iterate through Mods components
-foreach ($mod in $json.Mods) {
-    downloadExtract -name $mod.name -url $mod.url
 }
 
 # Function to move extracted folders to a different location
@@ -56,7 +51,3 @@ function Move-ExtractedFolders {
         }
     }
 }
-
-# Example usage of Move-ExtractedFolders function
-# $finalDestinationPath = "path\to\final\destination"
-# Move-ExtractedFolders -sourcePath $tmpPath -destinationPath $finalDestinationPath
