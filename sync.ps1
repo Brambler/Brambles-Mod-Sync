@@ -25,9 +25,9 @@ function Get-UserConfirmation {
 # Prompt the user to choose the folder location
 try {
     $sptInstallationPath = Get-FolderPath
-    Write-Output "Selected installation path: $sptInstallationPath"
+    Write-Host "`nSelected installation path: $sptInstallationPath"
 } catch {
-    Write-Output $_
+    Write-Host "`n$_"
     exit
 }
 
@@ -38,11 +38,14 @@ $logFilePath = Join-Path -Path $PSScriptRoot -ChildPath $logFileName
 # Function to log messages
 function LOGGER {
     param (
-        $message
+        $message,
+        $isImportant = $false
     )
     $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
     $logEntry = "$timestamp - $message"
-    Write-Output $logEntry
+    if ($isImportant) {
+        Write-Host "`n$logEntry" -ForegroundColor Yellow
+    }
     Add-Content -Path $logFilePath -Value $logEntry
 }
 
@@ -53,9 +56,9 @@ $manifestUrl = "https://raw.githubusercontent.com/Brambler/Brambles-Mod-Sync/mai
 try {
     $manifestContent = Invoke-WebRequest -Uri $manifestUrl -UseBasicParsing
     $json = $manifestContent.Content | ConvertFrom-Json
-    LOGGER "Manifest file downloaded successfully."
+    LOGGER "Manifest file downloaded successfully." $true
 } catch {
-    LOGGER "Error downloading manifest file: $($_)"
+    LOGGER "Error downloading manifest file: $($_)" $true
     exit
 }
 
@@ -74,13 +77,14 @@ function downloadExtract {
     )
     $fileName = "$name.zip"
     $outputFile = Join-Path -Path $tmpPath -ChildPath $fileName
+    $extractPath = Join-Path -Path $tmpPath -ChildPath $name
     LOGGER "Downloading $name from $url to $outputFile"
 
     try {
-        Invoke-WebRequest -Uri $url -OutFile $outputFile -ErrorAction Stop -UseBasicParsing -Verbose -OutVariable downloadLog
+        Invoke-WebRequest -Uri $url -OutFile $outputFile -ErrorAction Stop -UseBasicParsing
         LOGGER "Download of $name completed successfully."
     } catch {
-        LOGGER "Error downloading $name from $url`: $($_)"
+        LOGGER "Error downloading $name from $url`: $($_)" $true
         return
     }
 
@@ -89,7 +93,7 @@ function downloadExtract {
         Expand-Archive -Path $outputFile -DestinationPath $tmpPath -Force
         LOGGER "Extraction of $name completed successfully."
     } catch {
-        LOGGER "Error extracting $name`: $($_)"
+        LOGGER "Error extracting $name`: $($_)" $true
     }
 }
 
@@ -117,8 +121,12 @@ function Move-ExtractedFolders {
 # Move extracted folders to the selected installation path
 Move-ExtractedFolders -sourcePath $tmpPath -destinationPath $sptInstallationPath
 
-# Delete the temporary extraction folder
+# Prompt the user to delete the temporary extraction folder
+if (Get-UserConfirmation -message "`nDo you want to delete the temporary extraction folder?" -options "(Y/n)") {
 Remove-Item -Path $tmpPath -Recurse -Force
-LOGGER "Temporary extraction folder deleted."
+    LOGGER "Temporary extraction folder deleted." $true
+} else {
+    LOGGER "Temporary extraction folder retained." $true
+}
 
 LOGGER "Script execution completed."
