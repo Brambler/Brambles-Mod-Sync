@@ -21,17 +21,39 @@ try {
     exit
 }
 
+# Create a log file with date and time in the name
+$logFileName = "SyncLog_$(Get-Date -Format 'yyyyMMdd_HHmmss').log"
+$logFilePath = Join-Path -Path $PSScriptRoot -ChildPath $logFileName
+
+# Function to log messages
+function LOGGER {
+    param (
+        $message
+    )
+    $timestamp = Get-Date -Format 'yyyy-MM-dd HH:mm:ss'
+    $logEntry = "$timestamp - $message"
+    Write-Output $logEntry
+    Add-Content -Path $logFilePath -Value $logEntry
+}
+
 # URL of the manifest file
 $manifestUrl = "https://raw.githubusercontent.com/Brambler/Brambles-Mod-Sync/main/manifest.json"
 
 # Download the manifest file
-$manifestContent = Invoke-WebRequest -Uri $manifestUrl -UseBasicParsing
-$json = $manifestContent.Content | ConvertFrom-Json
+try {
+    $manifestContent = Invoke-WebRequest -Uri $manifestUrl -UseBasicParsing
+    $json = $manifestContent.Content | ConvertFrom-Json
+    LOGGER "Manifest file downloaded successfully."
+} catch {
+    LOGGER "Error downloading manifest file: $($_)"
+    exit
+}
 
 # Create a temporary extraction folder
 $tmpPath = Join-Path -Path $PSScriptRoot -ChildPath "tmp"
 if (-not (Test-Path -Path $tmpPath)) {
     New-Item -Path $tmpPath -ItemType Directory | Out-Null
+    LOGGER "Temporary extraction folder created."
 }
 
 # Function to download and extract files with error handling and progress logging
@@ -42,22 +64,22 @@ function downloadExtract {
     )
     $fileName = "$name.zip"
     $outputFile = Join-Path -Path $tmpPath -ChildPath $fileName
-    Write-Output "Downloading $name from $url to $outputFile"
+    LOGGER "Downloading $name from $url to $outputFile"
 
     try {
         Invoke-WebRequest -Uri $url -OutFile $outputFile -ErrorAction Stop -UseBasicParsing -Verbose -OutVariable downloadLog
-        Write-Output "Download of $name completed successfully."
+        LOGGER "Download of $name completed successfully."
     } catch {
-        Write-Output "Error downloading $name from $url`: $($_)"
+        LOGGER "Error downloading $name from $url`: $($_)"
         return
     }
 
     # Extract the zip file
     try {
         Expand-Archive -Path $outputFile -DestinationPath $tmpPath -Force
-        Write-Output "Extraction of $name completed successfully."
+        LOGGER "Extraction of $name completed successfully."
     } catch {
-        Write-Output "Error extracting $name`: $($_)"
+        LOGGER "Error extracting $name`: $($_)"
     }
 }
 
@@ -77,6 +99,7 @@ function Move-ExtractedFolders {
         if ($folder.Name -eq "user" -or $folder.Name -eq "BepInEx") {
             $destFolder = Join-Path -Path $destinationPath -ChildPath $folder.Name
             Move-Item -Path $folder.FullName -Destination $destFolder -Force
+            LOGGER "Moved $($folder.Name) to $destFolder"
         }
     }
 }
@@ -86,4 +109,6 @@ Move-ExtractedFolders -sourcePath $tmpPath -destinationPath $sptInstallationPath
 
 # Delete the temporary extraction folder
 Remove-Item -Path $tmpPath -Recurse -Force
-Write-Output "Temporary extraction folder deleted."
+LOGGER "Temporary extraction folder deleted."
+
+LOGGER "Script execution completed."
