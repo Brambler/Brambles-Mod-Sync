@@ -1,5 +1,9 @@
-# Load the JSON file
-$json = Get-Content -Raw -Path "path\to\manifest.json" | ConvertFrom-Json
+# URL of the manifest file
+$manifestUrl = "https://raw.githubusercontent.com/Brambler/Brambles-Mod-Sync/main/manifest.json"
+
+# Download the manifest file
+$manifestContent = Invoke-WebRequest -Uri $manifestUrl -UseBasicParsing
+$json = $manifestContent.Content | ConvertFrom-Json
 
 # Function to construct the download URL
 function Get-DownloadUrl {
@@ -9,6 +13,12 @@ function Get-DownloadUrl {
         $fileName
     )
     return "$baseUrl$version/$fileName"
+}
+
+# Create SyncDownloads folder if it doesn't exist
+$downloadPath = Join-Path -Path $PSScriptRoot -ChildPath "SyncDownloads"
+if (-not (Test-Path -Path $downloadPath)) {
+    New-Item -Path $downloadPath -ItemType Directory | Out-Null
 }
 
 # Iterate through Core components
