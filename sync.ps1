@@ -5,32 +5,58 @@ $manifestUrl = "https://raw.githubusercontent.com/Brambler/Brambles-Mod-Sync/mai
 $manifestContent = Invoke-WebRequest -Uri $manifestUrl -UseBasicParsing
 $json = $manifestContent.Content | ConvertFrom-Json
 
-# Function to construct the download URL
-function Get-DownloadUrl {
-    param (
-        $baseUrl,
-        $version,
-        $fileName
-    )
-    return "$baseUrl$version/$fileName"
-}
-
 # Create SyncDownloads folder if it doesn't exist
 $downloadPath = Join-Path -Path $PSScriptRoot -ChildPath "SyncDownloads"
 if (-not (Test-Path -Path $downloadPath)) {
     New-Item -Path $downloadPath -ItemType Directory | Out-Null
 }
 
-# Iterate through Core components
-foreach ($core in $json.Core) {
-    $downloadUrl = Get-DownloadUrl -baseUrl $core.url -version $core.version -fileName $core.'file-name'
-    Write-Output "Downloading $($core.name) from $downloadUrl"
-    Invoke-WebRequest -Uri $downloadUrl -OutFile $core.'file-name'
+# Create a temporary extraction folder
+$tmpPath = Join-Path -Path $PSScriptRoot -ChildPath "TempExtract"
+if (-not (Test-Path -Path $tmpPath)) {
+    New-Item -Path $tmpPath -ItemType Directory | Out-Null
 }
 
-# # Iterate through Mods components
-# foreach ($mod in $json.Mods) {
-#     $downloadUrl = Get-DownloadUrl -baseUrl $mod.url -version $mod.version -fileName $mod.'file-name'
-#     Write-Output "Downloading $($mod.name) from $downloadUrl"
-#     Invoke-WebRequest -Uri $downloadUrl -OutFile $mod.'file-name'
-# }
+# Function to download and extract files
+function downloadExtract {
+    param (
+        $name,
+        $url
+    )
+    $fileName = [System.IO.Path]::GetFileName($url)
+    $outputFile = Join-Path -Path $downloadPath -ChildPath $fileName
+    Write-Output "Downloading $name from $url"
+    Invoke-WebRequest -Uri $url -OutFile $outputFile
+
+    # Extract the zip file
+    Expand-Archive -Path $outputFile -DestinationPath $tmpPath -Force
+}
+
+# Iterate through Core components
+foreach ($core in $json.Core) {
+    downloadExtract -name $core.name -url $core.url
+}
+
+# Iterate through Mods components
+foreach ($mod in $json.Mods) {
+    downloadExtract -name $mod.name -url $mod.url
+}
+
+# Function to move extracted folders to a different location
+function Move-ExtractedFolders {
+    param (
+        $sourcePath,
+        $destinationPath
+    )
+    $folders = Get-ChildItem -Path $sourcePath -Directory
+    foreach ($folder in $folders) {
+        if ($folder.Name -eq "user" -or $folder.Name -eq "BepInEx") {
+            $destFolder = Join-Path -Path $destinationPath -ChildPath $folder.Name
+            Move-Item -Path $folder.FullName -Destination $destFolder -Force
+        }
+    }
+}
+
+# Example usage of Move-ExtractedFolders function
+# $finalDestinationPath = "path\to\final\destination"
+# Move-ExtractedFolders -sourcePath $tmpPath -destinationPath $finalDestinationPath
