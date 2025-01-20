@@ -2,37 +2,21 @@
     "Core": [
       {
         "name": "FIKA-Server",
-        "version": "2.3.6",
-        "file-name": "fika-server.zip",
-        "url": "https://github.com/project-fika/Fika-Server/releases/download/v",
-        "server": "True",
-        "client": "False"
+        "url": "https://github.com/project-fika/Fika-Server/releases/download/v"
       },
       {
         "name": "FIKA-Client",
-        "version": "1.1.5.0",
-        "file-name": "Fika.Release.1.1.5.0.zip",
-        "url": "https://github.com/project-fika/Fika-Plugin/releases/download/v",
-        "server": "False",
-        "client": "True"
+        "url": "https://github.com/project-fika/Fika-Plugin/releases/download/v1.1.5.0/Fika.Release.1.1.5.0.zip"
       }
     ],
     "Mods": [
       {
         "name": "ModComponent1",
-        "version": "0.0.0",
-        "file-name": "mod.zip",
-        "url": "http://example.com/mod1",
-        "server": "False",
-        "client": "True"
+        "url": "http://example.com/mod1"
       },
       {
         "name": "ModComponent2",
-        "version": "0.0.0",
-        "file-name": "mod.zip",
-        "url": "http://example.com/mod2",
-        "server": "False",
-        "client": "True"
+        "url": "http://example.com/mod2"
       }
   ]
 }
