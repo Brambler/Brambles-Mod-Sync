@@ -2,7 +2,7 @@
     "Core": [
       {
         "name": "FIKA-Server",
-        "url": "https://github.com/project-fika/Fika-Server/releases/download/v"
+        "url": "https://github.com/project-fika/Fika-Server/releases/download/v2.3.6/fika-server.zip"
       },
       {
         "name": "FIKA-Client",
