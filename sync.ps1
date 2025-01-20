@@ -90,7 +90,7 @@ function downloadExtract {
 
     # Extract the zip file
     try {
-        Expand-Archive -Path $outputFile -DestinationPath $tmpPath -Force
+        Expand-Archive -Path $outputFile -DestinationPath $extractPath -Force
         LOGGER "Extraction of $name completed successfully."
     } catch {
         LOGGER "Error extracting $name`: $($_)" $true
@@ -102,31 +102,54 @@ foreach ($core in $json.Core) {
     downloadExtract -name $core.name -url $core.url
 }
 
-# Function to move extracted folders to a different location
-function Move-ExtractedFolders {
+# Function to compare and move extracted folders to a different location with overwrite prompt for each file
+function Compare-And-Move {
     param (
         $sourcePath,
         $destinationPath
     )
     $folders = Get-ChildItem -Path $sourcePath -Directory
     foreach ($folder in $folders) {
-        if ($folder.Name -eq "user" -or $folder.Name -eq "BepInEx") {
-            $destFolder = Join-Path -Path $destinationPath -ChildPath $folder.Name
-            Move-Item -Path $folder.FullName -Destination $destFolder -Force
-            LOGGER "Moved $($folder.Name) to $destFolder"
+        $subFolders = Get-ChildItem -Path $folder.FullName -Directory
+        foreach ($subFolder in $subFolders) {
+            if ($subFolder.Name -eq "user" -or $subFolder.Name -eq "BepInEx") {
+                $destFolder = Join-Path -Path $destinationPath -ChildPath $subFolder.Name
+                $files = Get-ChildItem -Path $subFolder.FullName -Recurse -File
+                $overwriteAll = $false
+                foreach ($file in $files) {
+                    $destFile = Join-Path -Path $destFolder -ChildPath $file.FullName.Substring($subFolder.FullName.Length + 1)
+                    $destDir = Split-Path -Path $destFile -Parent
+                    if (-not (Test-Path -Path $destDir)) {
+                        New-Item -Path $destDir -ItemType Directory | Out-Null
+                    }
+                    if (Test-Path -Path $destFile) {
+                        if (-not $overwriteAll) {
+                            $response = Get-UserConfirmation -message "`nFile $destFile already exists. Do you want to overwrite it?" -options "(ALL/y/n)"
+                            if ($response -eq 'n') {
+                                LOGGER "Skipped overwriting $destFile"
+                                continue
+                            } elseif ($response -eq 'all') {
+                                $overwriteAll = $true
+                            }
+                        }
+                    }
+                    Copy-Item -Path $file.FullName -Destination $destFile -Force
+                    LOGGER "Copied $($file.FullName) to $destFile"
+                }
+            }
         }
     }
 }
 
-# Move extracted folders to the selected installation path
-Move-ExtractedFolders -sourcePath $tmpPath -destinationPath $sptInstallationPath
+# Compare and move extracted folders to the selected installation path
+Compare-And-Move -sourcePath $tmpPath -destinationPath $sptInstallationPath
 
 # Prompt the user to delete the temporary extraction folder
 if (Get-UserConfirmation -message "`nDo you want to delete the temporary extraction folder?" -options "(Y/n)") {
-Remove-Item -Path $tmpPath -Recurse -Force
+    Remove-Item -Path $tmpPath -Recurse -Force
     LOGGER "Temporary extraction folder deleted." $true
 } else {
     LOGGER "Temporary extraction folder retained." $true
 }
 
-LOGGER "Script execution completed."
+LOGGER "Script execution completed." $true
